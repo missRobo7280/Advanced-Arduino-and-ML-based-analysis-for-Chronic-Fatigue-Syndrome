@@ -9,21 +9,20 @@ import time
 import joblib
 import re
 
-# Load model and tools
 model = joblib.load("random_forest_model.pkl")
 scaler = joblib.load("scaler.pkl")
 le = joblib.load("label_encoder.pkl")
 feature_names = joblib.load("feature_names.pkl")  # ['Altitude', 'GSR', 'Pressure', 'Pulse', 'Temp']
 
-# Setup serial
+
 ser = serial.Serial('COM8', 9600, timeout=2)
 time.sleep(2)
 
-# GUI App
+
 class SensorApp:
     def __init__(self, root):
         self.root = root
-        self.root.title("Stress Prediction System")
+        self.root.title("Advanced Arduino based Stress Analysis System for Chronic Fatigue Syndrome(CFS)")
         self.root.configure(bg="black")
         self.running = False
 
@@ -112,11 +111,15 @@ class SensorApp:
                 input_df = pd.DataFrame([[altitude, gsr, pressure, pulse, temp]], columns=feature_names)
                 scaled = scaler.transform(input_df)
 
-                # Manual override and prediction
-                if gsr < 300:
+                if gsr<300:
                     result = "Abnormal"
-                    color = "red"
-                    ser.write(b"C")  # Send C for abnormal
+                    color="red"
+                    ser.write(b"C")
+                elif gsr > 300 or pulse <800:
+                    result = "Normal"
+                    color = "green"
+                    ser.write(b"B")
+
                 else:
                     pred = model.predict(scaled)[0]
                     result = le.inverse_transform([pred])[0]
@@ -142,7 +145,11 @@ class SensorApp:
 
 # Start GUI
 if __name__ == "__main__":
-    root = tk.Tk()
-    app = SensorApp(root)
-    root.mainloop()
-    ser.close()
+    try:
+        root = tk.Tk()
+        app = SensorApp(root)
+        root.mainloop()
+    finally:
+        if ser.is_open:
+          ser.close()
+
